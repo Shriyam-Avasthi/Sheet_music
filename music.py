@@ -118,6 +118,7 @@ class SymbolType(Enum):
     EIGHTH_REST = 5
     QUARTER_REST = 6
     HALF_REST = 7
+    EIGHTH_FLAG = 8
 
 class Note():
     def __init__(self, pitch, position, type):
@@ -423,7 +424,7 @@ def locate_templates(img, templates, start, stop, threshold, text, overlap = 0.7
     return img_locations
 
 def merge_boxes(boxes, threshold, music):
-    preference_order = ["&", "#", "q", "h", "w", "r_8", "r_4", "r_16", "r_2", "r_1"]
+    preference_order = ["&", "#", "q", "h", "w", "r_8", "r_4", "r_16", "r_2", "r_1", "f_8"]
     filtered_boxes = []
     while len(boxes) > 0:
         # print(len(boxes))
@@ -698,6 +699,49 @@ def main():
 
             note = Note(pitch, box.getCenter(), type )
             music.add_note(note)
+
+    ############################################################# FINDING FLAGS #################################################################
+
+    #Eighth Flag
+
+    note_templates = []
+    flag_boxes = []
+    # gray_noteheads_only = cv2.bitwise_and(remove_staff_lines(gray), cv2.bitwise_not(gray))
+    note_template_paths = os.listdir( os.path.join(base_template_path, "flag", "eighth_flag") )
+    for note_path in note_template_paths :
+        template_img = cv2.imread( os.path.join(base_template_path, "flag", "eighth_flag", note_path ), cv2.IMREAD_GRAYSCALE)
+        _, template_img = cv2.threshold(template_img, 200, 255, cv2.THRESH_BINARY)
+        note_templates.append( template_img )
+        # cv2.imshow( note_path, template_img)
+
+    flag_boxes.extend(locate_templates(gray, note_templates, int(25*SCALING_FACTOR), int(80*SCALING_FACTOR), 0.85, "f_8", 0.85) )
+
+    # flag_boxes = locate_templates(gray, note_templates, int(20*SCALING_FACTOR), int(80*SCALING_FACTOR), 0.75, "r_2", 0.85) 
+
+    #Finalize Rest Identification
+    boxes = merge_boxes([j for i in flag_boxes for j in i], 0.6, music)
+    # print(staffs[staff_index].position_within_staff(218.7))
+    for box in boxes:
+        pitch = music.get_note_pitch( box.getCenter() )
+        
+        if( pitch is not None ):
+            if(box.text == "h"):
+                type = SymbolType.HALF_NOTE
+            elif(box.text == "q"):
+                type = SymbolType.QUARTER_NOTE
+            elif( box.text == "r_8"):
+                type = SymbolType.EIGHTH_REST
+            elif(box.text == "r_4"):
+                type = SymbolType.QUARTER_REST
+            elif(box.text == "r_2"):
+                type = SymbolType.HALF_REST
+            elif(box.text == "f_8"):
+                type = SymbolType.EIGHTH_FLAG
+
+            note = Note(pitch, box.getCenter(), type )
+            music.add_note(note)
+            
+
     # print(len(boxes))
     draw_all_boxes( img, boxes)
     music.print_notes()
