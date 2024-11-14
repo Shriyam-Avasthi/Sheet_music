@@ -279,7 +279,8 @@ class Music():
     
     def add_clef_info( self, clef_type, clef_position ):
         staff_index = self.get_staff(clef_position)
-        self.staff_lines[staff_index].add_clef_info(clef_type, clef_position)
+        if( staff_index != -1 ):
+            self.staff_lines[staff_index].add_clef_info(clef_type, clef_position)
     
     def draw_marks(self):
         for staff in self.staff_lines:
@@ -462,17 +463,18 @@ def main():
     img = cv2.fastNlMeansDenoising(img, None, 10, 7, 21)
     base_template_path =  os.path.join( os.getcwd(), "Template")
     gray = cv2.cvtColor( img, cv2.COLOR_BGR2GRAY )
-    _, gray =cv2.threshold(gray, 127, 255, cv2.THRESH_OTSU | cv2.THRESH_BINARY)
+    _, gray =cv2.threshold(gray, 180, 255, cv2.THRESH_BINARY)
     # gray = cv2.bitwise_not(gray)
     # gray = remove_staff_lines(gray)
 
     # cdst = cv2.cvtColor(img_canny, cv2.COLOR_GRAY2BGR)
     # # cdstP = np.copy(cdst)
     
-    lines = cv2.HoughLines(cv2.bitwise_not(gray), 1, np.pi/ 180,  400, None, 0, 0, 1.52, 1.6)
+    lines = cv2.HoughLines(cv2.bitwise_not(gray), 1, np.pi/ 180,  250, None, 0, 0, 1.5, 1.6)
     line_ys = []
     staffs = []
     STAFF_DELTA = 20 * SCALING_FACTOR
+
     if lines is not None:
         DELTA = 5 * SCALING_FACTOR
         for i in range(0, len(lines)):
